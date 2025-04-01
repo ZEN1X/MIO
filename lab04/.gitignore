@@ -1,0 +1,2 @@
+# ignore datasets loaded through torch.datasets
+data/
