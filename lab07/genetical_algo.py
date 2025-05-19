@@ -49,17 +49,37 @@ class GrayEncoding(EncodingStyle):
         return self.x_min + num / (2**self.length-1) * (self.x_max - self.x_min)
 
 class SelectionStyle(ABC):
+    def __init__(self) -> None:
+        super().__init__()
+        self.generator = np.random.default_rng()
+
     @abstractmethod
     def select(self, individuals: list['Individual'], fitness: np.ndarray) -> list['Individual']:
         pass
 
 class RouletteSelection(SelectionStyle):
+    def __init__(self) -> None:
+        super().__init__()
+
     def select(self, individuals: list['Individual'], fitness: np.ndarray) -> list['Individual']:
         vals = fitness - np.min(fitness) + 1e-9 # min-shifted
         probs = vals / np.sum(vals) # probabilities in range [0, 1]
         
-        idx = np.random.default_rng().choice(len(individuals), size=len(individuals), p=probs)
+        idx = self.generator.choice(len(individuals), size=len(individuals), p=probs)
+        return [individuals[i].clone() for i in idx]
+    
+class ThresholdSelection(SelectionStyle):
+    def __init__(self, gamma: float) -> None:
+        super().__init__()
+        self.gamma = gamma
 
+    def select(self, individuals: list['Individual'], fitness: np.ndarray) -> list['Individual']:
+        n = len(individuals) # total number of individuals
+        cutoff = int(np.ceil(self.gamma / 100 * n)) # number of individuals that will reproduce
+        top_idx = np.argsort(fitness)[-cutoff:] # top indices
+
+        chosen = self.generator.choice(top_idx, size=n)
+        return [individuals[i].clone() for i in chosen]
 
 
 class Individual:
